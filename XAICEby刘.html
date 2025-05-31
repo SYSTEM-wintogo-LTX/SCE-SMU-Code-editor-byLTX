@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAICE-SMU AI Code Editor</title>
+    <style>
+        :root {
+            --bg-color: #f0f5ff;
+            --text-color: #2c3e50;
+            --editor-bg: #ffffff;
+            --editor-border: #bdc3c7;
+            --line-number-bg: #e6f0ff;
+            --line-number-color: #7f8c8d;
+            --button-bg: #3498db;
+            --button-hover: #2980b9;
+            --button-text: white;
+            --header-bg: #3498db;
+            --header-text: white;
+            --modal-bg: rgba(0,0,0,0.7);
+            --modal-content-bg: #fefefe;
+            --input-border: #bdc3c7;
+            --output-bg: #eaf2f8;
+            --output-border: #d5e3f0;
+            --pro-color: #f1c40f;
+            --plus-color: #e74c3c;
+            --ultra-color: #9b59b6;
+        }
+
+        .dark-mode {
+            --bg-color: #1a2b3c;
+            --text-color: #ecf0f1;
+            --editor-bg: #2c3e50;
+            --editor-border: #34495e;
+            --line-number-bg: #1e2b38;
+            --line-number-color: #95a5a6;
+            --button-bg: #2980b9;
+            --button-hover: #3498db;
+            --button-text: white;
+            --header-bg: #2980b9;
+            --header-text: white;
+            --modal-bg: rgba(0,0,0,0.9);
+            --modal-content-bg: #34495e;
+            --input-border: #4a6278;
+            --output-bg: #243342;
+            --output-border: #34495e;
+        }
+
+        body {
+            font-family: 'Consolas', 'Courier New', monospace;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .title {
+            margin: 0;
+            font-size: 1.5em;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9em;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--button-hover);
+        }
+
+        .editor-container {
+            display: flex;
+            margin: 20px;
+            border: 1px solid var(--editor-border);
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .line-numbers {
+            background-color: var(--line-number-bg);
+            color: var(--line-number-color);
+            padding: 10px;
+            text-align: right;
+            user-select: none;
+            overflow-y: hidden;
+            border-right: 1px solid var(--editor-border);
+            min-width: 40px;
+        }
+
+        .line-number {
+            line-height: 1.5;
+        }
+
+        #editor {
+            flex-grow: 1;
+            min-height: 400px;
+            padding: 10px;
+            background-color: var(--editor-bg);
+            color: var(--text-color);
+            border: none;
+            resize: none;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            tab-size: 4;
+            outline: none;
+            white-space: pre;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            margin: 0 20px 20px;
+            gap: 10px;
+        }
+
+        .language-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid var(--input-border);
+            background-color: var(--editor-bg);
+            color: var(--text-color);
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .output-container {
+            margin: 20px;
+            border: 1px solid var(--output-border);
+            border-radius: 4px;
+            padding: 15px;
+            background-color: var(--output-bg);
+            min-height: 100px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .output-title {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            color: var(--text-color);
+        }
+
+        #output {
+            white-space: pre-wrap;
+            margin: 0;
+            font-family: inherit;
+            line-height: 1.5;
+        }
+
+        .ai-badge {
+            background-color: #9b59b6;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 class="title">SAICE-SMU<span class="ai-badge">AI</span></h1>
+        <div class="controls">
+            <button id="themeToggle">夜间模式</button>
+            <button id="runBtn">运行</button>
+            <button id="importBtn">导入</button>
+            <button id="exportBtn">导出</button>
+        </div>
+    </div>
+
+    <div class="editor-container">
+        <div class="line-numbers" id="lineNumbers"></div>
+        <textarea id="editor" spellcheck="false"></textarea>
+    </div>
+
+    <div class="output-container">
+        <h3 class="output-title">输出结果</h3>
+        <pre id="output"></pre>
+    </div>
+
+    <div class="footer">
+        <div class="language-selector">
+            <span>编程语言:</span>
+            <select id="languageSelect">
+                <option value="html">HTML</option>
+                <option value="css">CSS</option>
+                <option value="js">JavaScript</option>
+                <option value="python">Python</option>
+                <option value="cpp">C++</option>
+                <option value="text">纯文本</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- 导入文件输入 -->
+    <input type="file" id="fileInput" style="display: none;">
+
+    <script>
+        // 编辑器元素
+        const editor = document.getElementById('editor');
+        const lineNumbers = document.getElementById('lineNumbers');
+        const output = document.getElementById('output');
+        const languageSelect = document.getElementById('languageSelect');
+        const themeToggle = document.getElementById('themeToggle');
+        const runBtn = document.getElementById('runBtn');
+        const importBtn = document.getElementById('importBtn');
+        const exportBtn = document.getElementById('exportBtn');
+
+        // 当前版本状态
+        let isDarkMode = false;
+
+        // 初始化编辑器
+        function initEditor() {
+            updateLineNumbers();
+            loadFromLocalStorage();
+
+            // 设置示例代码
+            if (!localStorage.getItem('editorContent')) {
+                setSampleCode();
+            }
+        }
+
+        // 设置示例代码
+        function setSampleCode() {
+            const sampleCode = {
+                html: '<!DOCTYPE html>\n<html>\n<head>\n    <title>SAICE-SMU 示例</title>\n    <style>\n        body { font-family: Arial; }\n        .ai-header { color: #3498db; }\n    </style>\n</head>\n<body>\n    <h1 class="ai-header">SAICE-SMU AI 代码编辑器</h1>\n    <p>这是一个HTML示例。</p>\n</body>\n</html>',
+                css: '/* SAICE-SMU CSS 示例 */\nbody {\n    background-color: #f0f5ff;\n    font-family: Arial, sans-serif;\n}\n\n.ai-header {\n    color: #3498db;\n    text-align: center;\n}\n\n.container {\n    max-width: 800px;\n    margin: 0 auto;\n    padding: 20px;\n}',
+                js: '// SAICE-SMU JavaScript 示例\nfunction calculateCircleArea(radius) {\n    return Math.PI * Math.pow(radius, 2);\n}\n\nfunction greet(name) {\n    console.log(`Hello, ${name}! Welcome to SAICE-SMU AI Editor.`);\n}\n\n// 主函数\n(function() {\n    greet("Developer");\n    const area = calculateCircleArea(5);\n    console.log(`Area of circle with radius 5: ${area.toFixed(2)}`);\n})();',
+                python: '# SAICE-SMU Python 示例\nimport math\n\ndef calculate_circle_area(radius):\n    """计算圆的面积"""\n    return math.pi * radius ** 2\n\nif __name__ == "__main__":\n    print("SAICE-SMU AI 代码编辑器")\n    print(f"半径为5的圆面积: {calculate_circle_area(5):.2f}")',
+                cpp: '#include <iostream>\n#include <cmath>\n\nusing namespace std;\n\n// SAICE-SMU C++ 示例\nfloat calculate_circle_area(float radius) {\n    return M_PI * pow(radius, 2);\n}\n\nint main() {\n    cout << "SAICE-SMU AI 代码编辑器" << endl;\n    cout << "半径为5的圆面积: " << calculate_circle_area(5) << endl;\n    return 0;\n}',
+                text: 'SAICE-SMU Artificial Intelligence Code Editor\n\n这是一个多功能代码编辑器，支持多种编程语言。\n\n特点:\n- 智能代码编辑\n- 多语言支持\n- 实时运行\n- 导入导出功能'
+            };
+
+            editor.value = sampleCode[languageSelect.value];
+            updateLineNumbers();
+        }
+
+        // 更新行号
+        function updateLineNumbers() {
+            const lines = editor.value.split('\n');
+            let numbers = '';
+
+            for (let i = 1; i <= lines.length; i++) {
+                numbers += `<div class="line-number">${i}</div>`;
+            }
+
+            lineNumbers.innerHTML = numbers;
+
+            // 同步滚动
+            lineNumbers.scrollTop = editor.scrollTop;
+        }
+
+        // 保存到本地存储
+        function saveToLocalStorage() {
+            localStorage.setItem('editorContent', editor.value);
+            localStorage.setItem('editorLanguage', languageSelect.value);
+        }
+
+        // 从本地存储加载
+        function loadFromLocalStorage() {
+            const savedContent = localStorage.getItem('editorContent');
+            const savedLanguage = localStorage.getItem('editorLanguage');
+
+            if (savedContent) {
+                editor.value = savedContent;
+            }
+
+            if (savedLanguage) {
+                languageSelect.value = savedLanguage;
+            }
+        }
+
+        // 切换主题
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark-mode', isDarkMode);
+            themeToggle.textContent = isDarkMode ? '白天模式' : '夜间模式';
+            localStorage.setItem('darkMode', isDarkMode);
+        }
+
+        // 运行代码
+        function runCode() {
+            const code = editor.value;
+            const language = languageSelect.value;
+
+            output.textContent = '';
+
+            try {
+                switch (language) {
+                    case 'html':
+                        // 在新窗口打开HTML
+                        const htmlWindow = window.open('', '_blank');
+                        htmlWindow.document.write(code);
+                        htmlWindow.document.close();
+                        output.textContent = 'HTML已在新窗口打开';
+                        break;
+
+                    case 'css':
+                        output.textContent = 'CSS需要与HTML配合使用，无法单独运行';
+                        break;
+
+                    case 'js':
+                        // 使用eval执行JavaScript代码
+                        output.textContent = 'JavaScript执行结果:\n';
+                        try {
+                            const originalConsoleLog = console.log;
+                            console.log = function() {
+                                for (let i = 0; i < arguments.length; i++) {
+                                    output.textContent += arguments[i] + ' ';
+                                }
+                                output.textContent += '\n';
+                                originalConsoleLog.apply(console, arguments);
+                            };
+
+                            eval(code);
+
+                            console.log = originalConsoleLog;
+                        } catch (e) {
+                            output.textContent += '错误: ' + e.message;
+                        }
+                        break;
+
+                    case 'python':
+                        // 使用浏览器中的Python解释器 (如Skulpt或其他)
+                        // 这里简化处理，实际需要引入Python解释器库
+                        output.textContent = 'Python执行结果:\n';
+                        // 模拟Python执行
+                        if (code.includes('print(')) {
+                            const matches = code.match(/print\(([^)]+)\)/g);
+                            if (matches) {
+                                matches.forEach(match => {
+                                    const content = match.replace(/print\((['"]?)(.*?)\1\)/, '$2');
+                                    output.textContent += content + '\n';
+                                });
+                            }
+                        } else {
+                            output.textContent += '代码中没有print语句，无输出';
+                        }
+                        break;
+
+                    case 'cpp':
+                        // C++无法在浏览器中直接运行，显示提示
+                        output.textContent = 'C++代码无法在浏览器中直接运行。\n请使用专业C++编译器编译此代码。';
+                        break;
+
+                    case 'text':
+                        output.textContent = '文本内容:\n' + code;
+                        break;
+                }
+            } catch (error) {
+                output.textContent = '错误:\n' + error.message;
+            }
+        }
+
+        // 获取文件扩展名
+        function getFileExtension(filename) {
+            return filename.split('.').pop().toLowerCase();
+        }
+
+        // 导出代码
+        function exportCode() {
+            const code = editor.value;
+            const language = languageSelect.value;
+            let extension = '.txt';
+            let mimeType = 'text/plain';
+
+            switch (language) {
+                case 'html':
+                    extension = '.html';
+                    mimeType = 'text/html';
+                    break;
+                case 'css':
+                    extension = '.css';
+                    mimeType = 'text/css';
+                    break;
+                case 'js':
+                    extension = '.js';
+                    mimeType = 'text/javascript';
+                    break;
+                case 'python':
+                    extension = '.py';
+                    break;
+                case 'cpp':
+                    extension = '.cpp';
+                    break;
+                case 'text':
+                    extension = '.txt';
+                    break;
+            }
+
+            const blob = new Blob([code], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `saice-sm_code${extension}`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // 导入代码
+        function importCode() {
+            fileInput.click();
+        }
+
+        // 处理导入的文件
+        function handleFileImport(file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const filename = file.name;
+                const ext = getFileExtension(filename);
+                const content = event.target.result;
+
+                if (['html', 'css', 'js', 'python', 'cpp', 'txt'].includes(ext)) {
+                    languageSelect.value = ext;
+                    output.textContent = `已导入${ext.toUpperCase()}文件: ${filename}`;
+                } else {
+                    languageSelect.value = 'text';
+                    output.textContent = `已导入文本文件: ${filename}`;
+                }
+
+                editor.value = content;
+                updateLineNumbers();
+                saveToLocalStorage();
+            };
+            reader.readAsText(file);
+        }
+
+        // 初始化事件监听
+        function initEventListeners() {
+            // 编辑器事件
+            editor.addEventListener('input', () => {
+                updateLineNumbers();
+                saveToLocalStorage();
+            });
+
+            editor.addEventListener('scroll', () => {
+                lineNumbers.scrollTop = editor.scrollTop;
+            });
+
+            // 语言选择
+            languageSelect.addEventListener('change', () => {
+                saveToLocalStorage();
+                setSampleCode();
+            });
+
+            // 主题切换
+            themeToggle.addEventListener('click', toggleTheme);
+
+            // 运行按钮
+            runBtn.addEventListener('click', runCode);
+
+            // 导出按钮
+            exportBtn.addEventListener('click', exportCode);
+
+            // 导入按钮
+            importBtn.addEventListener('click', importCode);
+
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                handleFileImport(file);
+                fileInput.value = ''; // 重置文件输入，允许重复选择同一文件
+            });
+        }
+
+        // 初始化应用
+        function initApp() {
+            // 加载保存的主题
+            isDarkMode = localStorage.getItem('darkMode') === 'true';
+            document.body.classList.toggle('dark-mode', isDarkMode);
+            themeToggle.textContent = isDarkMode ? '白天模式' : '夜间模式';
+
+            initEditor();
+            initEventListeners();
+        }
+
+        // 启动应用
+        initApp();
+    </script>
+</body>
+</html>

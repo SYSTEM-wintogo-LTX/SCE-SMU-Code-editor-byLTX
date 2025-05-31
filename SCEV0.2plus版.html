@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMU代码编辑器</title>
+    <style>
+        /* 页面加载动画相关的 CSS 代码 */
+        .loader-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #1a202c; /* 深黑色背景 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 1s ease-in-out;
+        }
+        .loader {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            perspective: 1000px;
+        }
+        .loader div {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #6574cd, #ff79c6);
+            animation: spin 2s infinite linear both;
+            transform-origin: 50% 50%;
+            clip-path: polygon(50% 0%, 75% 0%, 100% 50%, 75% 100%, 50% 100%, 25% 100%, 0% 50%, 25% 0%);
+        }
+        @keyframes spin {
+            from {
+                transform: rotateY(0deg);
+            }
+            to {
+                transform: rotateY(360deg);
+            }
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+        }
+        .title-bar {
+            background-color: #2563eb;
+            color: white;
+            text-align: center;
+            padding: 1rem;
+            font-size: 2rem;
+            font-weight: bold;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            z-index: 1;
+        }
+        .editor-container, .preview-container {
+            width: 50%;
+            height: 100%;
+            overflow: hidden;
+        }
+        .editors-wrapper {
+            display: flex;
+            flex: 1;
+        }
+        textarea {
+            width: 100%;
+            height: 33.33%;
+            border: none;
+            resize: none;
+            padding: 10px;
+            box-sizing: border-box;
+            font-size: 14px;
+            border-bottom: 1px solid #ddd;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 页面加载动画 -->
+    <div class="loader-container" id="loaderContainer">
+        <div class="loader">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="title-bar">SMU代码可视化编辑器</div>
+    <div class="editors-wrapper">
+        <div class="editor-container">
+            <textarea id="htmlEditor" placeholder="在此输入您的HTML代码..."></textarea>
+            <textarea id="cssEditor" placeholder="在此输入您的CSS代码..."></textarea>
+            <textarea id="jsEditor" placeholder="在此输入您的JavaScript代码..."></textarea>
+        </div>
+        <div class="preview-container">
+            <iframe id="output"></iframe>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载完成后执行
+        window.onload = function() {
+            // 隐藏加载动画
+            const loaderContainer = document.getElementById('loaderContainer');
+            loaderContainer.style.opacity = 0;
+            setTimeout(() => {
+                loaderContainer.style.display = 'none';
+            }, 1000);
+        };
+
+        const htmlEditor = document.getElementById('htmlEditor');
+        const cssEditor = document.getElementById('cssEditor');
+        const jsEditor = document.getElementById('jsEditor');
+        const outputFrame = document.getElementById('output').contentDocument;
+
+        function updateOutput() {
+            const htmlContent = htmlEditor.value;
+            const cssContent = `<style>${cssEditor.value}</style>`;
+            const jsContent = `<script>${jsEditor.value}<\/script>`;
+
+            outputFrame.open();
+            outputFrame.write(htmlContent + cssContent + jsContent);
+            outputFrame.close();
+        }
+
+        htmlEditor.addEventListener('input', updateOutput);
+        cssEditor.addEventListener('input', updateOutput);
+        jsEditor.addEventListener('input', updateOutput);
+
+        updateOutput();
+    </script>
+</body>
+</html>

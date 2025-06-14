@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAICE-SMU AI Code Editor</title>
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --secondary-color: #8b5cf6;
+            --accent-color: #ec4899;
+            --neutral-color: #f3f4f6;
+            --dark-color: #1f2937;
+            --editor-bg: #ffffff;
+            --editor-border: #e5e7eb;
+            --line-number-bg: #f9fafb;
+            --line-number-color: #9ca3af;
+            --button-bg: var(--primary-color);
+            --button-hover: #4f46e5;
+            --button-text: white;
+            --header-bg: var(--primary-color);
+            --header-text: white;
+            --output-bg: #f9fafb;
+            --output-border: #e5e7eb;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .dark-mode {
+            --primary-color: #818cf8;
+            --secondary-color: #a78bfa;
+            --accent-color: #f472b6;
+            --neutral-color: #1f2937;
+            --dark-color: #f3f4f6;
+            --editor-bg: #111827;
+            --editor-border: #374151;
+            --line-number-bg: #1f2937;
+            --line-number-color: #6b7280;
+            --button-bg: var(--primary-color);
+            --button-hover: #93c5fd;
+            --button-text: var(--dark-color);
+            --header-bg: #1e40af;
+            --header-text: white;
+            --output-bg: #1f2937;
+            --output-border: #374151;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', 'Consolas', 'Courier New', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--neutral-color);
+            color: var(--dark-color);
+            transition: all 0.3s ease;
+        }
+
+        .header {
+            background: linear-gradient(90deg, var(--header-bg), var(--secondary-color));
+            color: var(--header-text);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+            z-index: 10;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .title {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+        }
+
+        .ai-badge {
+            background: linear-gradient(135deg, var(--accent-color), var(--secondary-color));
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin-left: 12px;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        button {
+            background: var(--button-bg);
+            color: var(--button-text);
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        button:hover {
+            background: var(--button-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .editor-container {
+            display: flex;
+            margin: 24px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+
+        .line-numbers {
+            background-color: var(--line-number-bg);
+            color: var(--line-number-color);
+            padding: 12px 8px;
+            text-align: right;
+            user-select: none;
+            overflow-y: hidden;
+            border-right: 1px solid var(--editor-border);
+            min-width: 40px;
+            font-size: 14px;
+        }
+
+        .line-number {
+            line-height: 1.5;
+            transition: all 0.1s ease;
+        }
+
+        #editor {
+            flex-grow: 1;
+            min-height: 450px;
+            padding: 12px;
+            background-color: var(--editor-bg);
+            color: var(--dark-color);
+            border: none;
+            resize: none;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            tab-size: 4;
+            outline: none;
+            white-space: pre;
+            transition: all 0.3s ease;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            margin: 0 24px 24px;
+            gap: 16px;
+        }
+
+        .language-selector {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        select {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--editor-border);
+            background-color: var(--editor-bg);
+            color: var(--dark-color);
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            padding-right: 40px;
+        }
+
+        select:hover {
+            border-color: var(--primary-color);
+        }
+
+        .output-container {
+            margin: 0 24px 24px;
+            border-radius: 12px;
+            padding: 16px;
+            background-color: var(--output-bg);
+            min-height: 150px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+
+        .output-title {
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+            color: var(--dark-color);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #output {
+            white-space: pre-wrap;
+            margin: 0;
+            font-family: 'Consolas', 'Courier New', monospace;
+            line-height: 1.5;
+            font-size: 0.95rem;
+            color: var(--dark-color);
+            min-height: 100px;
+            padding: 12px;
+            background-color: var(--editor-bg);
+            border-radius: 8px;
+            border: 1px solid var(--editor-border);
+        }
+
+        /* HarmonyOS 加载动画样式 */
+        .harmonyos-loader-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .harmonyos-loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #FFF;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* 毛玻璃效果样式 */
+        .blur-box {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 10px 20px;
+            margin: 10px;
+            text-align: center;
+            color: white;
+        }
+
+        .powered-by-img {
+            width: 100px; /* 根据需要调整图片宽度 */
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- HarmonyOS 加载动画 -->
+    <div class="harmonyos-loader-container" id="harmonyosLoaderContainer">
+        <div class="blur-box" style="font-size: 24px;">欢迎使用</div>
+        <div class="blur-box" style="font-size: 18px;">V0.4</div>
+        <div class="blur-box">
+            <span>Powered by</span><br>
+            <img class="powered-by-img" src="https://www.liu.ct.ws/wp-content/uploads/2025/06/XAICE.png" alt="Powered by Xaice">
+        </div>
+        <div class="harmonyos-loader"></div>
+    </div>
+
+    <div class="header">
+        <h1 class="title">SAICE-SMU<span class="ai-badge">AI</span></h1>
+        <div class="controls">
+            <button id="themeToggle">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-moon-stars"
+                    viewBox="0 0 16 16">
+                    <path
+                        d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278zM4.858 1.311A7.269 7.269 0 0 0 1.025 7.71c0 4.02 3.279 7.276 7.319 7.276a7.316 7.316 0 0 0 5.205-2.162c-.337.042-.68.063-1.029.063-4.61 0-8.343-3.714-8.343-8.29 0-1.167.242-2.278.681-3.286z" />
+                    <path
+                        d="M10.794 3.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097.924.78 0 1.338-.624 1.338-1.402 0-.779-.559-1.41-1.34-1.41-.525 0-.94.39-.108.981l-.39 1.167c-.105.31-.394.655-.81 1.003a.219.219 0 0 1-.37 0l-.387-1.162c-.34-.995-1.106-1.612-2.064-1.612-.533 0-1.01.21-1.31.598l-.39 1.167c-.11.317-.396.647-.824.98a.219.219 0 0 1-.37 0l-.387-1.162C3.35 6.504 2.704 6.066 2.256 5.51c-.845-.975-.94-2.31-.21-3.32.292-.417.753-.642 1.274-.642.78 0 1.458.634 1.458 1.41 0 .79-.586 1.41-1.458 1.41-.17 0-.339-.033-.495-.098l-.39 1.162c-.106.313-.395.655-.83 1.003a.22.22 0 0 1-.374 0l-.387-1.162c-.408-.972-.699-2.17-.699-3.475 0-2.206 1.76-3.97 3.91-3.97.564 0 1.1.11 1.592.334z" />
+                </svg>
+                夜间模式
+            </button>
+            <button id="runBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play-fill"
+                    viewBox="0 0 16 16">
+                    <path
+                        d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z" />
+                </svg>
+                运行
+            </button>
+            <button id="importBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-upload"
+                    viewBox="0 0 16 16">
+                    <path
+                        d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
+                    <path
+                        d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z" />
+                </svg>
+                导入
+            </button>
+            <button id="exportBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download"
+                    viewBox="0 0 16 16">
+                    <path
+                        d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
+                    <path
+                        d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z" />
+                </svg>
+                导出
+            </button>
+        </div>
+    </div>
+
+    <div class="editor-container">
+        <div class="line-numbers" id="lineNumbers"></div>
+        <textarea id="editor" spellcheck="false"></textarea>
+    </div>
+
+    <div class="output-container">
+        <h3 class="output-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-terminal"
+                viewBox="0 0 16 16">
+                <path
+                    d="M6 9a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 9zM3.854 4.146a.5.5 0 1 0-.708.708L4.793 6.5 3.146 8.146a.5.5 0 1 0 .708.708l2-2a.5.5 0 0 0 0-.708l-2-2z" />
+                <path
+                    d="M2 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2H2zm12 1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h12z" />
+            </svg>
+            输出结果
+        </h3>
+        <pre id="output"></pre>
+    </div>
+
+    <div class="footer">
+        <div class="language-selector">
+            <span>编程语言:</span>
+            <select id="languageSelect">
+                <option value="html" selected>HTML</option>
+                <option value="css">CSS</option>
+                <option value="js">JavaScript</option>
+                <option value="python">Python</option>
+                <option value="cpp">C++</option>
+                <option value="text">纯文本</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- 导入文件输入 -->
+    <input type="file" id="fileInput" style="display: none;">
+
+    <script>
+        // 编辑器元素
+        const editor = document.getElementById('editor');
+        const lineNumbers = document.getElementById('lineNumbers');
+        const output = document.getElementById('output');
+        const languageSelect = document.getElementById('languageSelect');
+        const themeToggle = document.getElementById('themeToggle');
+        const runBtn = document.getElementById('runBtn');
+        const importBtn = document.getElementById('importBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const harmonyosLoaderContainer = document.getElementById('harmonyosLoaderContainer');
+
+        // 当前版本状态
+        let isDarkMode = false;
+
+        // 初始化编辑器
+        function initEditor() {
+            updateLineNumbers();
+            loadFromLocalStorage();
+
+            // 设置示例代码
+            if (!localStorage.getItem('editorContent')) {
+                setSampleCode();
+            }
+
+            // 隐藏加载动画，延长至4.8秒
+            setTimeout(() => {
+                harmonyosLoaderContainer.style.opacity = '0';
+                setTimeout(() => {
+                    harmonyosLoaderContainer.style.display = 'none';
+                }, 500);
+            }, 4800);
+        }
+
+        // 设置示例代码
+        function setSampleCode() {
+            const sampleCode = {
+                html: '<!DOCTYPE html>\n<html>\n<head>\n    <title>SAICE-SMU 示例</title>\n    <style>\n        body { font-family: Arial; }\n        .ai-header { color: #6366f1; }\n    </style>\n</head>\n<body>\n    <h1 class="ai-header">SAICE-SMU AI 代码编辑器</h1>\n    <p>这是一个HTML示例。</p>\n</body>\n</html>',
+                css: '/* SAICE-SMU CSS 示例 */\nbody {\n    background-color: #f3f4f6;\n    font-family: Arial, sans-serif;\n}\n\n.ai-header {\n    color: #6366f1;\n    text-align: center;\n}\n\n.container {\n    max-width: 800px;\n    margin: 0 auto;\n    padding: 20px;\n    border-radius: 12px;\n    box-shadow: 0 4px 6px rgba(0,0,0,0.1);\n}',
+                js: '// SAICE-SMU JavaScript 示例\nfunction calculateCircleArea(radius) {\n    return Math.PI * Math.pow(radius, 2);\n}\n\nfunction greet(name) {\n    console.log(`Hello, ${name}! Welcome to SAICE-SMU AI Editor.`);\n}\n\n// 主函数\n(function() {\n    greet("Developer");\n    const area = calculateCircleArea(5);\n    console.log(`Area of circle with radius 5: ${area.toFixed(2)}`);\n\n    // 添加一个简单的动画效果\n    const header = document.querySelector(".ai-header");\n    if (header) {\n        header.style.transition = "color 0.3s ease";\n        setTimeout(() => {\n            header.style.color = "#8b5cf6";\n        }, 1000);\n    }\n})();',
+                python: '# SAICE-SMU Python 示例\nimport math\n\ndef calculate_circle_area(radius):\n    """计算圆的面积"""\n    return math.pi * radius ** 2\n\nif __name__ == "__main__":\n    print("SAICE-SMU AI 代码编辑器")\n    print(f"半径为5的圆面积: {calculate_circle_area(5):.2f}")\n    \n    # 打印一个彩色的问候\n    colors = {\'reset\': \'\\033[0m\', \'blue\': \'\\033[94m\', \'purple\': \'\\033[95m\'}\n    print(f"{colors[\'blue\']}欢迎使用{colors[\'purple\']}SAICE-SMU{colors[\'reset\']}代码编辑器!")',
+                cpp: '#include <iostream>\n#include <cmath>\n\nusing namespace std;\n\n// SAICE-SMU C++ 示例\nfloat calculate_circle_area(float radius) {\n    return M_PI * pow(radius, 2);\n}\n\nint main() {\n    cout << "SAICE-SMU AI 代码编辑器" << endl;\n    cout << "半径为5的圆面积: " << calculate_circle_area(5) << endl;\n    \n    // 一个简单的循环示例\n    for (int i = 0; i < 5; i++) {\n        cout << "迭代次数: " << i << endl;\n    }\n    \n    return 0;\n}',
+                text: 'SAICE-SMU Artificial Intelligence Code Editor\n\n这是一个多功能代码编辑器，支持多种编程语言。\n\n特点:\n- 智能代码编辑\n- 多语言支持\n- 实时运行\n- 导入导出功能\n\n现在的编辑器采用了更加年轻化的配色方案，使用了靛蓝、紫色和粉红色作为主色调，打造出现代化、活力四射的用户体验。'
+            };
+
+            editor.value = sampleCode[languageSelect.value];
+            updateLineNumbers();
+        }
+
+        // 更新行号
+        function updateLineNumbers() {
+            const lines = editor.value.split('\n');
+            let numbers = '';
+
+            for (let i = 1; i <= lines.length; i++) {
+                numbers += `<div class="line-number">${i}</div>`;
+            }
+
+            lineNumbers.innerHTML = numbers;
+
+            // 同步滚动
+            lineNumbers.scrollTop = editor.scrollTop;
+        }
+
+        // 保存到本地存储
+        function saveToLocalStorage() {
+            localStorage.setItem('editorContent', editor.value);
+            localStorage.setItem('editorLanguage', languageSelect.value);
+        }
+
+        // 从本地存储加载
+        function loadFromLocalStorage() {
+            const savedContent = localStorage.getItem('editorContent');
+            const savedLanguage = localStorage.getItem('editorLanguage');
+
+            if (savedContent) {
+                editor.value = savedContent;
+            }
+
+            if (savedLanguage) {
+                languageSelect.value = savedLanguage;
+            }
+        }
+
+        // 切换主题
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark-mode', isDarkMode);
+
+            if (isDarkMode) {
+                themeToggle.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sun" viewBox="0 0 16 16">
+                        <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z"/>
+                    </svg>
+                    白天模式
+                `;
+            } else {
+                themeToggle.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-moon-stars" viewBox="0 0 16 16">
+                        <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278zM4.858 1.311A7.269 7.269 0 0 0 1.025 7.71c0 4.02 3.279 7.276 7.319 7.276a7.316 7.316 0 0 0 5.205-2.162c-.337.042-.68.063-1.029.063-4.61 0-8.343-3.714-8.343-8.29 0-1.167.242-2.278.681-3.286z"/>
+                        <path d="M10.794 3.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097.924.78 0 1.338-.624 1.338-1.402 0-.779-.559-1.41-1.34-1.41-.525 0-.94.39-.108.981l-.39 1.167c-.105.31-.394.655-.81 1.003a.219.219 0 0 1-.37 0l-.387-1.162c-.34-.995-1.106-1.612-2.064-1.612-.533 0-1.01.21-1.31.598l-.39 1.167c-.11.317-.396.647-.824.98a.219.219 0 0 1-.37 0l-.387-1.162C3.35 6.504 2.704 6.066 2.256 5.51c-.845-.975-.94-2.31-.21-3.32.292-.417.753-.642 1.274-.642.78 0 1.458.634 1.458 1.41 0 .79-.586 1.41-1.458 1.41-.17 0-.339-.033-.495-.098l-.39 1.162c-.106.313-.395.655-.83 1.003a.22.22 0 0 1-.374 0l-.387-1.162c-.408-.972-.699-2.17-.699-3.475 0-2.206 1.76-3.97 3.91-3.97.564 0 1.1.11 1.592.334z"/>
+                    </svg>
+                    夜间模式
+                `;
+            }
+
+            localStorage.setItem('darkMode', isDarkMode);
+        }
+
+        // 运行代码
+        function runCode() {
+            const code = editor.value;
+            const language = languageSelect.value;
+
+            output.textContent = '';
+            output.style.color = '';
+
+            // 显示加载动画
+            output.textContent = '正在运行...';
+            output.style.color = '#6366f1';
+
+            setTimeout(() => {
+                try {
+                    switch (language) {
+                        case 'html':
+                            // 在新窗口打开HTML
+                            const htmlWindow = window.open('', '_blank');
+                            htmlWindow.document.write(code);
+                            htmlWindow.document.close();
+                            output.textContent = 'HTML已在新窗口打开';
+                            output.style.color = '#10b981'; // 绿色
+                            break;
+
+                        case 'css':
+                            output.textContent = 'CSS需要与HTML配合使用，无法单独运行';
+                            output.style.color = '#f59e0b'; // 橙色
+                            break;
+
+                        case 'js':
+                            // 使用eval执行JavaScript代码
+                            output.textContent = 'JavaScript执行结果:\n';
+                            try {
+                                const originalConsoleLog = console.log;
+                                console.log = function () {
+                                    for (let i = 0; i < arguments.length; i++) {
+                                        output.textContent += arguments[i] + ' ';
+                                    }
+                                    output.textContent += '\n';
+                                    originalConsoleLog.apply(console, arguments);
+                                };
+
+                                eval(code);
+
+                                console.log = originalConsoleLog;
+                                output.style.color = '#10b981'; // 绿色
+                            } catch (e) {
+                                output.textContent += '错误: ' + e.message;
+                                output.style.color = '#ef4444'; // 红色
+                            }
+                            break;
+
+                        case 'python':
+                            // 使用浏览器中的Python解释器 (如Skulpt或其他)
+                            // 这里简化处理，实际需要引入Python解释器库
+                            output.textContent = 'Python执行结果:\n';
+                            // 模拟Python执行
+                            if (code.includes('print(')) {
+                                const matches = code.match(/print\(([^)]+)\)/g);
+                                if (matches) {
+                                    matches.forEach(match => {
+                                        const content = match.replace(/print\((['"]?)(.*?)\1\)/, '$2');
+                                        output.textContent += content + '\n';
+                                    });
+                                    output.style.color = '#10b981'; // 绿色
+                                } else {
+                                    output.textContent += '代码中没有print语句，无输出';
+                                    output.style.color = '#f59e0b'; // 橙色
+                                }
+                            } else {
+                                output.textContent += '代码中没有print语句，无输出';
+                                output.style.color = '#f59e0b'; // 橙色
+                            }
+                            break;
+
+                        case 'cpp':
+                            // C++无法在浏览器中直接运行，显示提示
+                            output.textContent = 'C++代码无法在浏览器中直接运行。\n请使用专业C++编译器编译此代码。';
+                            output.style.color = '#f59e0b'; // 橙色
+                            break;
+
+                        case 'text':
+                            output.textContent = '文本内容:\n' + code;
+                            output.style.color = '#10b981'; // 绿色
+                            break;
+                    }
+                } catch (error) {
+                    output.textContent = '错误:\n' + error.message;
+                    output.style.color = '#ef4444'; // 红色
+                }
+            }, 500);
+        }
+
+        // 获取文件扩展名
+        function getFileExtension(filename) {
+            return filename.split('.').pop().toLowerCase();
+        }
+
+        // 导出代码
+        function exportCode() {
+            const code = editor.value;
+            const language = languageSelect.value;
+            let extension = '.txt';
+            let mimeType = 'text/plain';
+
+            switch (language) {
+                case 'html':
+                    extension = '.html';
+                    mimeType = 'text/html';
+                    break;
+                case 'css':
+                    extension = '.css';
+                    mimeType = 'text/css';
+                    break;
+                case 'js':
+                    extension = '.js';
+                    mimeType = 'text/javascript';
+                    break;
+                case 'python':
+                    extension = '.py';
+                    break;
+                case 'cpp':
+                    extension = '.cpp';
+                    break;
+                case 'text':
+                    extension = '.txt';
+                    break;
+            }
+
+            const blob = new Blob([code], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `saice-sm_code${extension}`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // 导入代码
+        function importCode() {
+            fileInput.click();
+        }
+
+        // 处理导入的文件
+        function handleFileImport(file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const filename = file.name;
+                const ext = getFileExtension(filename);
+                const content = event.target.result;
+
+                if (['html', 'css', 'js', 'python', 'cpp', 'txt'].includes(ext)) {
+                    languageSelect.value = ext;
+                    output.textContent = `已导入${ext.toUpperCase()}文件: ${filename}`;
+                    output.style.color = '#10b981'; // 绿色
+                } else {
+                    languageSelect.value = 'text';
+                    output.textContent = `已导入文本文件: ${filename}`;
+                    output.style.color = '#10b981'; // 绿色
+                }
+
+                editor.value = content;
+                updateLineNumbers();
+                saveToLocalStorage();
+            };
+            reader.readAsText(file);
+        }
+
+        // 初始化事件监听
+        function initEventListeners() {
+            // 编辑器事件
+            editor.addEventListener('input', () => {
+                updateLineNumbers();
+                saveToLocalStorage();
+            });
+
+            editor.addEventListener('scroll', () => {
+                lineNumbers.scrollTop = editor.scrollTop;
+            });
+
+            // 语言选择
+            languageSelect.addEventListener('change', () => {
+                saveToLocalStorage();
+                setSampleCode();
+            });
+
+            // 主题切换
+            themeToggle.addEventListener('click', toggleTheme);
+
+            // 运行按钮
+            runBtn.addEventListener('click', runCode);
+
+            // 导出按钮
+            exportBtn.addEventListener('click', exportCode);
+
+            // 导入按钮
+            importBtn.addEventListener('click', importCode);
+
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                handleFileImport(file);
+                fileInput.value = ''; // 重置文件输入，允许重复选择同一文件
+            });
+        }
+
+        // 初始化应用
+        function initApp() {
+            // 加载保存的主题
+            isDarkMode = localStorage.getItem('darkMode') === 'true';
+            document.body.classList.toggle('dark-mode', isDarkMode);
+            if (isDarkMode) {
+                themeToggle.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sun" viewBox="0 0 16 16">
+                        <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z"/>
+                    </svg>
+                    白天模式
+                `;
+            } else {
+                themeToggle.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-moon-stars" viewBox="0 0 16 16">
+                        <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278zM4.858 1.311A7.269 7.269 0 0 0 1.025 7.71c0 4.02 3.279 7.276 7.319 7.276a7.316 7.316 0 0 0 5.205-2.162c-.337.042-.68.063-1.029.063-4.61 0-8.343-3.714-8.343-8.29 0-1.167.242-2.278.681-3.286z"/>
+                        <path d="M10.794 3.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097.924.78 0 1.338-.624 1.338-1.402 0-.779-.559-1.41-1.34-1.41-.525 0-.94.39-.108.981l-.39 1.167c-.105.31-.394.655-.81 1.003a.219.219 0 0 1-.37 0l-.387-1.162c-.34-.995-1.106-1.612-2.064-1.612-.533 0-1.01.21-1.31.598l-.39 1.167c-.11.317-.396.647-.824.98a.219.219 0 0 1-.37 0l-.387-1.162C3.35 6.504 2.704 6.066 2.256 5.51c-.845-.975-.94-2.31-.21-3.32.292-.417.753-.642 1.274-.642.78 0 1.458.634 1.458 1.41 0 .79-.586 1.41-1.458 1.41-.17 0-.339-.033-.495-.098l-.39 1.162c-.106.313-.395.655-.83 1.003a.22.22 0 0 1-.374 0l-.387-1.162c-.408-.972-.699-2.17-.699-3.475 0-2.206 1.76-3.97 3.91-3.97.564 0 1.1.11 1.592.334z"/>
+                    </svg>
+                    夜间模式
+                `;
+            }
+
+            initEditor();
+            initEventListeners();
+        }
+
+        // 启动应用
+        initApp();
+    </script>
+</body>
+
+</html>
